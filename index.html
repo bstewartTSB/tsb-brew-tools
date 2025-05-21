@@ -29,7 +29,7 @@ input{width:6rem}
   <label>Starting Gravity °P <input id="g0" type="number" step="0.01"></label><br>
   <label>Starting Vol bbl <input id="v0" type="number" step="0.01"></label><br>
   <label>Target Gravity °P <input id="gt" type="number" step="0.01"></label><br>
-  <button onclick="solveDilution()">Calculate</button>
+  <button onclick="goalSeekD6()">Calculate</button>
   <p id="dilutionOut"></p>
 </section>
 
@@ -40,24 +40,52 @@ input{width:6rem}
 </section>
 
 <script>
-// tab nav
-function show(id){document.querySelectorAll('section').forEach(s=>s.classList.toggle('active',s.id===id))}
+/* ---------------------------------------------------------------
+   USER-EDIT SECTION —- tell this function how to compute D14
+   given any candidate value of D6.  Replace the math below with
+   whatever your Excel formula chain really is.
+   ----------------------------------------------------------------*/
+function calcD14(d6) {
+  /* Example placeholder:
+     You have starting gravity g0, volume v0, target gt, and d6 = water bbl
+     D14 is (finalGravity - target)
+  */
+  const g0 = +g0Input.value;     // read from UI
+  const v0 = +v0Input.value;
+  const gt = +gtInput.value;
 
-// iterative dilution solver
-function solveDilution(){
-  const g0=+g0.value,v0=+v0.value,gt=+gt.value;
-  let vW=0, gMix=g0;
-  while(Math.abs(gMix-gt)>.0001){
-    vW+=0.01;              // step size in bbl
-    gMix=(g0*v0+1*vW)/(v0+vW);
-  }
-  dilutionOut.textContent=`Add ${vW.toFixed(2)} bbl of water`;
+  // simple mixing physics –- replace with your actual workbook math
+  const finalGravity =
+        (g0 * v0 + 1 * d6) / (v0 + d6);    // 1 °P water
+
+  return finalGravity - gt;   // Excel had this in D14
 }
 
-// PWA install/offline
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js');
+/* ---------------------------------------------------------------
+   GENERAL GOAL-SEEK: drive calcD14(d6) → 0 by changing d6
+   ----------------------------------------------------------------*/
+function goalSeekD6() {
+  let low  = 0;      // lower bound for D6 (bbl water)
+  let high = 100;    // upper bound – set something sensible
+  let mid  = (low + high) / 2;
+  const tol = 1e-4;  // same tolerance Excel uses in GoalSeek
+
+  // bisection loop – always converges if calcD14 is monotone
+  for (let i = 0; i < 50; i++) {
+    const f = calcD14(mid);
+    if (Math.abs(f) < tol) break;
+
+    // pick the side that has opposite sign
+    (f > 0 ? low : high) = mid;
+    mid = (low + high) / 2;
+  }
+
+  // write the answer back to the UI
+  d6Input.value      = mid.toFixed(3);
+  d14Output.textContent =
+        `Residual (should be 0): ${calcD14(mid).toFixed(5)}`;
 }
 </script>
+
 </body>
 </html>
