@@ -135,10 +135,11 @@ function calcWater(){
 const W_MASS_PER_BBL = 8.3454 * 31;   // 258.7074 lb/bbl
 
 function calcStrike(){
-  const gm    = +gm.value;
-  const gtOld = +gtemp.value;
-  const sv    = +svol.value;
-  const mashT = +mashT.value;
+  const gm    = +document.getElementById('gm').value;
+  const gtOld = +document.getElementById('gtemp').value;
+  const sv    = +document.getElementById('svol').value;
+  const mashT = +document.getElementById('mashT').value;
+
 
   if([gm,gtOld,sv,mashT].some(n => !isFinite(n) || n <= 0)){
     alert("Enter all four inputs."); return;
