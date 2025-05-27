@@ -1,7 +1,7 @@
 // sw.js  —  Third Space Cellar Tools
 // ----------------------------------
 // bump this string any time you change filenames in FILES[]
-const CACHE = 'cellar-tools-v5'; // update w/ multiple cards
+const CACHE = 'cellar-tools-v6'; // update w/ multiple cards
 
 const FILES = [
   '.',               // index.html
