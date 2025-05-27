@@ -21,9 +21,6 @@
 </head>
 <body>
 
-<!-- ========================================================= -->
-<!-- 3-TURN GRAVITY DILUTION CALCULATOR                         -->
-<!-- ========================================================= -->
 <section class="card">
   <h2>3-Turn Gravity Dilution</h2>
 
@@ -44,25 +41,22 @@
 
   <!-- Target -->
   <label style="margin-top:8px">
-    <strong>Target&nbsp;G</strong> (°P)
+    <strong>Target G</strong> (°P)
     <input id="gt" type="number" step="0.01">
   </label>
 
   <button onclick="calcWater()">Calculate</button>
 
   <p id="waterOut"></p>
+  <p id="turn3Out"></p>
+  <p id="totalOut"></p>
   <p id="residOut" style="font-size:.9rem;color:#555"></p>
 </section>
 
 <script>
-/* -------------------------------------------------------------
-   CALCULATE WATER ADDITION – handles 0, 1, 2 or 3 existing turns
-   ------------------------------------------------------------- */
 function calcWater(){
-  // helper ⇒ blanks → 0
   const num = id => +document.getElementById(id).value || 0;
 
-  // gather inputs
   const g1 = num('g1'), v1 = num('v1'),
         g2 = num('g2'), v2 = num('v2'),
         g3 = num('g3'), v3 = num('v3'),
@@ -70,33 +64,37 @@ function calcWater(){
 
   /* -------- validation -------- */
   if (!gt || gt <= 0 || Math.abs(gt - 1) < 1e-6){
-    alert("Enter a target gravity (>0 °P and ≠ 1 °P).");
-    return;
+    alert("Enter a target gravity (>0 °P and ≠ 1 °P)."); return;
   }
 
-  const extract = g1*v1 + g2*v2 + g3*v3;  // total °P·bbl
-  const vol     = v1 + v2 + v3;           // total bbl
+  const extract = g1*v1 + g2*v2 + g3*v3;   // °P·bbl
+  const vol     = v1 + v2 + v3;            // bbl
 
   if (vol === 0){
-    alert("Enter at least one turn with non-zero volume.");
-    return;
+    alert("Enter at least one turn with non-zero volume."); return;
   }
 
-  /* -------- closed-form water calc --------
-       W = (G_t · V  −  Σ G_i·V_i)  /  (1 − G_t)
-     ---------------------------------------- */
-  const w = (gt*vol - extract) / (1 - gt);   // bbl water @ 1 °P
+  // closed-form water requirement (bbl @ 1 °P)
+  const w = (gt*vol - extract) / (1 - gt);
 
   if (w < 0){
     alert("Target gravity is higher than current blend (water volume would be negative).");
     return;
   }
 
-  const finalG = (extract + w) / (vol + w);
-  const resid  = finalG - gt;
+  /* ----- results ----- */
+  const v3Adj = v3 + w;                        // Turn 3 final volume
+  const g3Adj = (g3*v3 + w*1) / v3Adj;         // Turn 3 final gravity
+  const finalVol = vol + w;                    // whole tank volume
+  const finalG   = (extract + w) / finalVol;   // sanity
+  const resid    = finalG - gt;
 
-  waterOut.textContent =
-      `Add <b>${w.toFixed(2)} bbl</b> of 1 °P water ⇒ final gravity ≈ ${finalG.toFixed(3)} °P`;
+  waterOut.innerHTML =
+      `Add <b>${w.toFixed(2)} bbl</b> of 1 °P water to Turn 3.`;
+  turn3Out.textContent =
+      `Turn 3 after dilution → ${g3Adj.toFixed(3)} °P @ ${v3Adj.toFixed(2)} bbl`;
+  totalOut.textContent =
+      `Total final tank volume: ${finalVol.toFixed(2)} bbl`;
   residOut.textContent =
       `Residual ${resid.toExponential(2)} (should be 0)`;
 }
