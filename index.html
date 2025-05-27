@@ -64,7 +64,7 @@
 </section>
 
 <!-- ========== STRIKE-IN WATER CALCULATOR ========== -->
-<section id="strike" class="card" style="display:none">
+<section id="strike" class="card">
   <h2>Strike-In Water Temp Calc</h2>
 
   <label>Grist mass (lb)
@@ -135,7 +135,7 @@ function calcWater(){
       `Total final tank volume: ${finalVol.toFixed(2)} bbl`;
   residOut.textContent =
       `Residual ${resid.toExponential(2)} (should be 0)`;
-
+}
 /* ---------- strike-in calculator ---------- */
 const W_MASS_PER_BBL = 8.3454 * 31;          // lb / bbl  = 258.7074
 
