@@ -162,8 +162,15 @@ window.addEventListener('DOMContentLoaded', ()=>{
 });
 
 /* offline cache */
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js');
+if ('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    // on every load, ask the browser: “Got anything newer?”
+    reg.update();
+    // if a brand-new worker takes control, reload once to swap files
+    navigator.serviceWorker.addEventListener('controllerchange', ()=>location.reload());
+  });
+}
+
 }
 </script>
 </body>
