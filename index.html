@@ -7,12 +7,13 @@
 <link rel="manifest" href="manifest.json">
 <style>
 :root {font-family: system-ui, sans-serif;}
-body{margin:0;padding:1rem;background:#f8f8f8}
-nav{display:flex;gap:.5rem;margin-bottom:1rem}
-button{flex:1;padding:.6rem;border:1px solid #ccc;border-radius:6px;background:#fff}
-section{display:none} section.active{display:block}
-input{width:6rem}
-.card{background:#fff;padding:1rem;border-radius:8px;box-shadow:0 2px 6px #0002}
+body   {margin:0;padding:1rem;background:#f8f8f8}
+nav    {display:flex;gap:.5rem;margin-bottom:1rem}
+button {flex:1;padding:.6rem;border:1px solid #ccc;border-radius:6px;background:#fff}
+section{display:none}
+section.active{display:block}
+input  {width:6rem}
+.card  {background:#fff;padding:1rem;border-radius:8px;box-shadow:0 2px 6px #0002}
 </style>
 </head>
 <body>
@@ -20,87 +21,83 @@ input{width:6rem}
 <nav>
   <button onclick="show('dilution')">Dilution</button>
   <button onclick="show('ibu')">IBU Adj</button>
-  <!-- add more tabs later -->
 </nav>
 
-<!-- CALCULATOR 1 -->
+<!-- ========== CALCULATOR 1 – GRAVITY DILUTION ========== -->
 <section id="dilution" class="active card">
   <h2>Gravity Dilution</h2>
 
-<label>Starting Gravity (°P)
-  <input id="g0Input" type="number" step="0.01" required>
-</label><br>
+  <label>Starting Gravity (°P)
+    <input id="g0Input" type="number" step="0.01" required>
+  </label><br>
 
-<label>Starting Volume (bbl)
-  <input id="v0Input" type="number" step="0.01" required>
-</label><br>
+  <label>Starting Volume (bbl)
+    <input id="v0Input" type="number" step="0.01" required>
+  </label><br>
 
-<label>Target Gravity (°P)
-  <input id="gtInput" type="number" step="0.01" required>
-</label><br>
+  <label>Target Gravity (°P)
+    <input id="gtInput" type="number" step="0.01" required>
+  </label><br>
 
-<button onclick="goalSeekD6()">Calculate</button>
+  <button onclick="goalSeekD6()">Calculate</button>
 
-<p>
-  Water to add: <input id="d6Input" readonly style="width:5rem"> bbl
-</p>
-<p id="d14Output" style="font-size:0.9rem;color:#555"></p>
-
+  <p>
+    Water to add: <input id="d6Input" readonly style="width:5rem"> bbl
+  </p>
+  <p id="d14Output" style="font-size:0.9rem;color:#555"></p>
 </section>
 
-<!-- CALCULATOR 2 (placeholder) -->
+<!-- ========== CALCULATOR 2 – placeholder ========== -->
 <section id="ibu" class="card">
   <h2>IBU Adjustment</h2>
   <p>Coming soon…</p>
 </section>
 
 <script>
-/* ---------------------------------------------------------------
-   USER-EDIT SECTION —- tell this function how to compute D14
-   given any candidate value of D6.  Replace the math below with
-   whatever your Excel formula chain really is.
-   ----------------------------------------------------------------*/
-function calcD14(d6) {
-  /* Example placeholder:
-     You have starting gravity g0, volume v0, target gt, and d6 = water bbl
-     D14 is (finalGravity - target)
-  */
-  const g0 = +g0Input.value;     // read from UI
-  const v0 = +v0Input.value;
-  const gt = +gtInput.value;
-
-  // simple mixing physics –- replace with your actual workbook math
-  const finalGravity =
-        (g0 * v0 + 1 * d6) / (v0 + d6);    // 1 °P water
-
-  return finalGravity - gt;   // Excel had this in D14
+/* ---------- Tab switcher ---------- */
+function show(id){
+  document.querySelectorAll('section')
+          .forEach(s => s.classList.toggle('active', s.id === id));
 }
 
-/* ---------------------------------------------------------------
-   GENERAL GOAL-SEEK: drive calcD14(d6) → 0 by changing d6
-   ----------------------------------------------------------------*/
-function goalSeekD6() {
-  let low  = 0;      // lower bound for D6 (bbl water)
-  let high = 100;    // upper bound – set something sensible
-  let mid  = (low + high) / 2;
-  const tol = 1e-4;  // same tolerance Excel uses in GoalSeek
+/* ---------- Excel-equivalent D14 ---------- */
+/* Replace this block with your real workbook math if needed. */
+function calcD14(d6){
+  const g0 = +g0Input.value;   // starting gravity
+  const v0 = +v0Input.value;   // starting volume
+  const gt = +gtInput.value;   // target gravity
 
-  // bisection loop – always converges if calcD14 is monotone
-  for (let i = 0; i < 50; i++) {
-    const f = calcD14(mid);
-    if (Math.abs(f) < tol) break;
+  /* Simple mix: wort + 1 °P water */
+  const finalGravity = (g0*v0 + 1*d6) / (v0 + d6);
 
-    // pick the side that has opposite sign
-    (f > 0 ? low : high) = mid;
-    mid = (low + high) / 2;
+  return finalGravity - gt;    // should → 0
+}
+
+/* ---------- Goal Seek (bisection) ---------- */
+function goalSeekD6(){
+  if(!(g0Input.value && v0Input.value && gtInput.value)){
+    alert("Please enter all three inputs first."); return;
   }
 
-  // write the answer back to the UI
+  let low = 0, high = 100, mid = (low+high)/2;
+  const tol = 1e-4;
+
+  for(let i=0;i<60;i++){
+    const f = calcD14(mid);
+    if(Math.abs(f) < tol) break;
+    (f > 0 ? low : high) = mid;
+    mid = (low+high)/2;
+  }
+
   d6Input.value      = mid.toFixed(3);
   d14Output.textContent =
-        `Residual (should be 0): ${calcD14(mid).toFixed(5)}`;
+      `Residual: ${calcD14(mid).toFixed(5)} (should be 0)`;
+}
+
+/* ---------- Offline support ---------- */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js');
 }
 </script>
-
 </body>
 </html>
