@@ -1,59 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Third Space – Cellar Tools</title>
-<link rel="manifest" href="manifest.json">
-<style>
-:root {font-family: system-ui, sans-serif;}
-body   {margin:0;padding:1rem;background:#f8f8f8}
-.card  {background:#fff;padding:1rem;border-radius:8px;box-shadow:0 2px 6px #0002;max-width:430px}
-label  {display:block;margin:6px 0}
-label strong{display:inline-block;width:3.9rem}
-input  {width:6rem}
-button {margin-top:10px;padding:.5rem 1rem;border:1px solid #888;border-radius:6px;background:#e6e6e6}
-h2     {margin-top:0}
-section            {display:none;}
-section.active     {display:block;}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Third Space – Cellar Tools</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    :root {font-family: system-ui, sans-serif;}
+    body   {margin:0;padding:1rem;background:#f8f8f8}
+    .card  {background:#fff;padding:1rem;border-radius:8px;
+            box-shadow:0 2px 6px #0002;max-width:430px}
+    label  {display:block;margin:6px 0}
+    label strong{display:inline-block;width:3.9rem}
+    input  {width:6rem}
+    button {margin-top:10px;padding:.5rem 1rem;border:1px solid #888;
+            border-radius:6px;background:#e6e6e6}
+    h2     {margin-top:0}
+    /* tab visibility */
+    section        {display:none;}
+    section.active {display:block;}
+  </style>
 </head>
 <body>
 
 <nav>
-  <button onclick="show('dilution')">Dilution&nbsp;Calc</button>
-  <button onclick="show('strike')">Strike-In&nbsp;H₂O&nbsp;Temp</button>
+  <button onclick="show('dilution')">Dilution Calc</button>
+  <button onclick="show('strike')">Strike-In H₂O Temp</button>
 </nav>
 
-<!-- ========== Multiturn Gravity Dilution ========== -->
+<!-- ───────── 3-Turn Gravity Dilution ───────── -->
 <section id="dilution" class="card active">
-  …  <!-- unchanged dilution markup -->
+  <h2>3-Turn Gravity Dilution</h2>
+
+  <!-- Turn 1 -->
+  <strong>Turn 1</strong>
+  <label><strong>G</strong> (°P) <input id="g1" type="number" step="0.05"></label>
+  <label><strong>V</strong> (bbl) <input id="v1" type="number" step="0.05"></label>
+
+  <!-- Turn 2 -->
+  <strong>Turn 2</strong>
+  <label><strong>G</strong> (°P) <input id="g2" type="number" step="0.05"></label>
+  <label><strong>V</strong> (bbl) <input id="v2" type="number" step="0.05"></label>
+
+  <!-- Turn 3 (pre-dilution) -->
+  <strong>Turn 3</strong>
+  <label><strong>G</strong> (°P) <input id="g3" type="number" step="0.05"></label>
+  <label><strong>V</strong> (bbl) <input id="v3" type="number" step="0.05"></label>
+
+  <!-- Target -->
+  <label style="margin-top:8px">
+    <strong>Target G</strong> (°P)
+    <input id="gt" type="number" step="0.01">
+  </label>
+
+  <button onclick="calcWater()">Calculate</button>
+
+  <p id="waterOut"></p>
+  <p id="turn3Out"></p>
+  <p id="totalOut"></p>
+  <p id="residOut" style="font-size:.9rem;color:#555"></p>
 </section>
 
-<!-- ========== STRIKE-IN WATER ========== -->
+<!-- ───────── Strike-In Water Temp ───────── -->
 <section id="strike" class="card">
-  …  <!-- unchanged strike-water markup -->
+  <h2>Strike-In Water Temp</h2>
+
+  <label>Grist mass (lb)
+    <input id="gm" type="number" step="0.1">
+  </label>
+  <label>Grist temp (°F)
+    <input id="gtemp" type="number" step="0.1">
+  </label>
+  <label>Strike vol (bbl)
+    <input id="svol" type="number" step="0.01">
+  </label>
+  <label>Target mash temp (°F)
+    <input id="mashT" type="number" step="0.1">
+  </label>
+
+  <button onclick="calcStrike()">Calculate</button>
+
+  <p id="strikeOut"></p>
 </section>
 
 <script>
-/* -------- tab switcher -------- */
+/* ── Tab switcher ── */
 function show(id){
   document.querySelectorAll('section')
-          .forEach(s=>s.classList.toggle('active', s.id===id));
+          .forEach(s => s.classList.toggle('active', s.id === id));
 }
 
-/* -------- dilution calculator -------- */
+/* ── Dilution calculator ── */
 function calcWater(){
-  …  /* unchanged dilution JS */
+  const num = id => +document.getElementById(id).value || 0;
+
+  const g1 = num('g1'), v1 = num('v1'),
+        g2 = num('g2'), v2 = num('v2'),
+        g3 = num('g3'), v3 = num('v3'),
+        gt = num('gt');
+
+  if(!gt || gt <= 0 || Math.abs(gt - 1) < 1e-6){
+    alert("Enter a target gravity (>0 °P and ≠ 1 °P)."); return;
+  }
+
+  const extract = g1*v1 + g2*v2 + g3*v3;
+  const vol     = v1 + v2 + v3;
+  if(vol === 0){
+    alert("Enter at least one turn with non-zero volume."); return;
+  }
+
+  const w = (gt*vol - extract) / (1 - gt);
+  if(w < 0){
+    alert("Target gravity is above current blend (water would be negative)."); return;
+  }
+
+  const v3Adj   = v3 + w;
+  const g3Adj   = (g3*v3 + w*1) / v3Adj;
+  const finalVol= vol + w;
+  const finalG  = (extract + w) / finalVol;
+  const resid   = finalG - gt;
+
+  waterOut.innerHTML =
+      `Add <b>${w.toFixed(2)} bbl</b> of 1 °P water to Turn 3.`;
+  turn3Out.textContent =
+      `Turn 3 after dilution → ${g3Adj.toFixed(3)} °P @ ${v3Adj.toFixed(2)} bbl`;
+  totalOut.textContent =
+      `Total final tank volume: ${finalVol.toFixed(2)} bbl`;
   residOut.textContent =
       `Residual ${resid.toExponential(2)} (should be 0)`;
-}  /* ←—— this brace was missing */
+}
 
-/* -------- strike-in calculator -------- */
+/* ── Strike-In calculator ── */
 const W_MASS_PER_BBL = 8.3454 * 31;   // 258.7074 lb/bbl
 
 function calcStrike(){
-  …  /* unchanged strike JS */
+  const gm    = +gm.value;
+  const gtOld = +gtemp.value;
+  const sv    = +svol.value;
+  const mashT = +mashT.value;
+
+  if([gm,gtOld,sv,mashT].some(n => !isFinite(n) || n <= 0)){
+    alert("Enter all four inputs."); return;
+  }
+
+  const num =
+      ((0.4*gm) + (sv*W_MASS_PER_BBL)) * mashT - (0.4*gm*gtOld);
+  const strikeT = num / (sv*W_MASS_PER_BBL);
+
+  strikeOut.textContent =
+      `Mash-in with ${sv.toFixed(2)} bbl at ${strikeT.toFixed(1)} °F`;
+
+  localStorage.setItem('lastGristTemp', gtOld);
 }
 
 /* preload last grist temp */
