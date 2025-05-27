@@ -59,13 +59,20 @@ function show(id){
   document.querySelectorAll('section')
           .forEach(s => s.classList.toggle('active', s.id === id));
 }
+/* ---------- element handles ---------- */
+const g0El  = document.getElementById('g0Input');
+const v0El  = document.getElementById('v0Input');
+const gtEl  = document.getElementById('gtInput');
+const d6El  = document.getElementById('d6Input');
+const d14El = document.getElementById('d14Output');
 
 /* ---------- Excel-equivalent D14 ---------- */
 /* Replace this block with your real workbook math if needed. */
 function calcD14(d6){
-  const g0 = +g0Input.value;   // starting gravity
-  const v0 = +v0Input.value;   // starting volume
-  const gt = +gtInput.value;   // target gravity
++ const g0 = +g0El.value;
++ const v0 = +v0El.value;
++ const gt = +gtEl.value;
+
 
   /* Simple mix: wort + 1 °P water */
   const finalGravity = (g0*v0 + 1*d6) / (v0 + d6);
@@ -89,9 +96,10 @@ function goalSeekD6(){
     mid = (low+high)/2;
   }
 
-  d6Input.value      = mid.toFixed(3);
-  d14Output.textContent =
-      `Residual: ${calcD14(mid).toFixed(5)} (should be 0)`;
+d6El.value      = mid.toFixed(3);
+d14El.textContent =
+  `Residual: ${calcD14(mid).toFixed(5)} (should be 0)`;
+
 }
 
 /* ---------- Offline support ---------- */
