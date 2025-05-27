@@ -6,6 +6,10 @@
   <title>Third Space – Cellar Tools</title>
   <link rel="manifest" href="manifest.json">
 
+  <button onclick="show('dilution')">Dilution</button>
+  <button onclick="show('strike')">Strike-In H₂O</button>
+
+
   <style>
     :root {font-family: system-ui, sans-serif;}
     body   {margin:0;padding:1rem;background:#f8f8f8}
@@ -21,7 +25,8 @@
 </head>
 <body>
 
-<section class="card">
+<!-- ========== Multiturn Gravity Dilution CALCULATOR ========== -->
+<section id="dilution" class="card active">
   <h2>3-Turn Gravity Dilution</h2>
 
   <!-- Turn 1 -->
@@ -53,7 +58,35 @@
   <p id="residOut" style="font-size:.9rem;color:#555"></p>
 </section>
 
+<!-- ========== STRIKE-IN WATER CALCULATOR ========== -->
+<section id="strike" class="card" style="display:none">
+  <h2>Strike-In Water</h2>
+
+  <label>Grist mass (lb)
+    <input id="gm" type="number" step="0.1">
+  </label>
+  <label>Grist temp (°F)
+    <input id="gtemp" type="number" step="0.1">
+  </label>
+  <label>Strike vol (bbl)
+    <input id="svol" type="number" step="0.01">
+  </label>
+  <label>Target mash temp (°F)
+    <input id="mashT" type="number" step="0.1">
+  </label>
+
+  <button onclick="calcStrike()">Calculate</button>
+
+  <p id="strikeOut"></p>
+</section>
+
+  
 <script>
+/* ===== tab-switcher – ONLY ONE COPY NEEDED ===== */
+function show(id){
+  document.querySelectorAll('section')
+          .forEach(s => s.classList.toggle('active', s.id === id));
+}
 function calcWater(){
   const num = id => +document.getElementById(id).value || 0;
 
@@ -97,6 +130,39 @@ function calcWater(){
       `Total final tank volume: ${finalVol.toFixed(2)} bbl`;
   residOut.textContent =
       `Residual ${resid.toExponential(2)} (should be 0)`;
+
+/* ---------- strike-in calculator ---------- */
+const W_MASS_PER_BBL = 8.3454 * 31;          // lb / bbl  = 258.7074
+
+function calcStrike(){
+  const gm    = +gm.value;          // grist mass
+  const gtOld = +gtemp.value;       // grist temp (may come from storage)
+  const sv    = +svol.value;        // strike vol
+  const mashT = +mashT.value;       // target mash temp
+
+  if([gm,gtOld,sv,mashT].some(n=>!isFinite(n)||n<=0)){
+    alert("Enter all four inputs."); return;
+  }
+
+  const numerator =
+        ((0.4*gm) + (sv*W_MASS_PER_BBL)) * mashT - (0.4*gm*gtOld);
+  const strikeT = numerator / (sv * W_MASS_PER_BBL);
+
+  strikeOut.textContent =
+      `Mash-in with ${sv.toFixed(2)} bbl at ${strikeT.toFixed(1)} °F`;
+
+  /* remember grist temp locally */
+  localStorage.setItem('lastGristTemp', gtOld);
+}
+
+/* ---------- load last grist temp on page load ---------- */
+window.addEventListener('DOMContentLoaded', ()=>{
+  const saved = +localStorage.getItem('lastGristTemp') || '';
+  if(saved) gtemp.value = saved;
+});
+
+  
+
 }
 
 /* optional offline caching */
