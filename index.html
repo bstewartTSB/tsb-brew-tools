@@ -105,7 +105,22 @@ function calcWater(){
   if(vol===0){alert('At least one turn needs volume'); return;}
 
   const w = (gt*vol - extract) / (1 - gt);
-  if(w<0){alert('Target gravity above current blend'); return;}
+  /* ----------- under-target branch ----------- */
+  if (w < 0) {
+    const currentG = extract / vol;           // °P of existing blend
+    const delta    = gt - currentG;           // how far under target
+
+    waterOut.innerHTML =
+      `<b>No dilution:</b> current blend is already <b>${delta.toFixed(3)} °P</b>` +
+      ` below target.<br>` +
+      `Gravity = ${currentG.toFixed(3)} °P  |  Volume = ${vol.toFixed(2)} bbl`;
+
+    /* clear the other output fields so nothing looks half-valid */
+    turn3Out.textContent  = '';
+    totalOut.textContent  = '';
+    residOut.textContent  = '';
+    return;                                   // stop here—no water added
+  }
 
   const v3Adj = v3 + w;
   const g3Adj = (g3*v3 + w) / v3Adj;
